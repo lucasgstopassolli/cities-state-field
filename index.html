@@ -1,0 +1,138 @@
+<script 
+        src="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.7/dist/autoComplete.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.7/dist/css/autoComplete.02.min.css">
+
+<script>
+
+    const autoCompleteJS = new autoComplete({
+        selector: '[name="form_fields[cidadef]"]',
+        citySelector: '[name="form_fields[cidade]"]',
+        stateSelector: '[name="form_fields[estado]"]',
+        data: {
+            src: async () => {
+                try {
+                    document.querySelector('[name="form_fields[cidadef]"]').setAttribute("placeholder", "Carregando...");
+                    const source = await fetch("estados_cidades.json");
+                    const data = await source.json();
+                    document.querySelector('[name="form_fields[cidadef]"]').setAttribute("placeholder", autoCompleteJS.placeHolder);
+
+                    const cities = data.map((estado) => {
+                        return estado.cidades.map((cidade) => {
+                            return {
+                                city: cidade,
+                                acronym: estado.sigla
+                            }
+                        });
+                    }).flat();
+
+                    return cities;
+                } catch (error) {
+                    return error;
+                }
+            },
+            keys: ["city"],
+            cache: true,
+            filter: (list) => {
+            const unique = {};
+            list.forEach((value) => {
+                const key = `${value.match}-${value.value.acronym}`;
+                if (!unique[key]) {
+                    unique[key] = value;
+                }
+            });
+            return Object.values(unique).sort((a, b) => a.match.length - b.match.length);
+        }
+        },
+        placeHolder: "",
+        resultsList: {
+            element: (list, data) => {
+                const info = document.createElement("p");
+                info.className = "text-center mb-0";
+                if (data.results.length == 0) {
+                    info.innerHTML = `
+                        <span class="p-3 d-block">Nenhuma cidade encontrada: <strong>"${data.query}"</strong></span>
+                    `;
+                }
+                list.prepend(info);
+            },
+            noResults: true,
+            maxResults: 15,
+            tabSelect: true
+        },
+        resultItem: {
+            element: (item, data) => {
+                item.style = "display: flex; justify-content: space-between;";
+                item.innerHTML = `
+                    <span style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
+                        ${data.match}
+                    </span>
+                    <span style="display: flex; align-items: center; font-size: 13px; font-weight: 400; text-transform: uppercase;">
+                        ${data.value.acronym}
+                    </span>
+                `;
+            },
+            highlight: true
+        },
+        events: {
+            input: {
+                focus: () => {
+                    autoCompleteJS.input.value = document.querySelector(autoCompleteJS.citySelector).value || "";
+                    if (autoCompleteJS.input.value.length) autoCompleteJS.start();
+                },
+                blur: () => {
+                    if (autoCompleteJS.feedback.matches.length == 0){
+                        autoCompleteJS.input.value = "";
+                        document.querySelector(autoCompleteJS.citySelector).value = "";
+                        document.querySelector(autoCompleteJS.stateSelector).value = "";
+                        return autoCompleteJS.close();
+                    }
+
+                    if(autoCompleteJS.feedback.selection){
+                        autoCompleteJS.select(autoCompleteJS.feedback.selection.value[autoCompleteJS.feedback.selection.key]);
+                        return autoCompleteJS.close();
+                    }
+
+                    const index = autoCompleteJS.feedback.matches.findIndex((value) => value.value.city === autoCompleteJS.input.value);
+                    if (index == -1) {
+                        autoCompleteJS.select(0);
+                        autoCompleteJS.close();
+                    } else {
+                        autoCompleteJS.select(index);
+                        autoCompleteJS.close();
+                    }
+                },
+                selection: () => {
+                    const selection = autoCompleteJS.feedback.selection;
+                    const cityName = selection.value.city;
+                    const stateName = selection.value.acronym;
+
+                    autoCompleteJS.input.value = cityName + " - " + stateName;
+                    document.querySelector(autoCompleteJS.citySelector).value = cityName;
+                    document.querySelector(autoCompleteJS.stateSelector).value = stateName;
+                    autoCompleteJS.close();
+                }
+            }
+        }
+    });
+            
+</script>
+
+
+<style>
+
+    
+  .autoComplete_wrapper>ul>li mark {
+    color: #128f40;
+    padding: 0;
+      
+  }
+  .autoComplete_wrapper {
+    display: block;
+    width: 100%!important;
+  }
+  .autoComplete_wrapper>input {
+    height: auto;
+    color:black!important;
+    width: 100%!important;
+  }
+</style>
